@@ -6,6 +6,10 @@ var bcrypt = require('bcrypt-nodejs');
 //models
 var UserModel = require('../models/user');
 
+
+//service
+var jwt = require('../services/jwt');
+
 function test(req, res){
     res.status(200).send({
        message: 'test controller user'
@@ -54,9 +58,47 @@ function saveUser(req, res){
 }
 
 function login(req, res) {
+    var params = req.body;
+    var email = params.email;
+    var password = params.password;
+
+
+    UserModel.findOne({email: email}, (err, user) => {
+        if (err) {
+            res.status(500).send({message: 'Error to validate user'});
+        } else {
+            if (user) {
+
+                bcrypt.compare(password, user.password, (err, check) => {
+                    if(check){
+                        if(params.getToken){
+                            //return token jwt
+                            res.status(200).send({
+                                token: jwt.createToken(user)
+                            });
+                        }else{
+                            res.status(200).send({user});
+                        }
+
+                    }else{
+                        res.status(404).send({
+                            message: 'user not login, input no valid'
+                        });
+                    }
+                });
+            } else {
+                res.status(404).send({
+                    message: 'user no exist. sing up please'
+                });
+            }
+        }
+
+    });
+
+/*
     res.status(200).send({
         message: 'response service for login'
-    });
+    });*/
 }
 
 module.exports = {
