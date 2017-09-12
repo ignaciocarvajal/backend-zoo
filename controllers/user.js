@@ -12,7 +12,8 @@ var jwt = require('../services/jwt');
 
 function test(req, res){
     res.status(200).send({
-       message: 'test controller user'
+       message: 'test controller user',
+       user: req.user
     });
 }
 
@@ -64,7 +65,7 @@ function login(req, res) {
 
 
     UserModel.findOne({email: email}, (err, user) => {
-        if (err) {
+        if(err) {
             res.status(500).send({message: 'Error to validate user'});
         } else {
             if (user) {
@@ -94,15 +95,49 @@ function login(req, res) {
         }
 
     });
+}
 
-/*
-    res.status(200).send({
-        message: 'response service for login'
+function updateUser(req, res){
+   /* res.status(200).send({
+        message: 'test updated user'
     });*/
+
+    var userId = req.params.id;
+
+    var update = req.body;
+    console.log(req.body);
+
+
+    if(userId != req.user.sub){
+        return res.status(500).send({
+            message: 'you not have permision'
+        });
+    }
+
+    UserModel.findByIdAndUpdate(userId, update,{new: true},(err, userUpdated) => {
+        if(err){
+            res.status(500).send({
+                message: 'Error, no find record'
+            });
+        }else{
+            if(!userUpdated){
+                res.status(404).send({
+                    message: 'no update user'
+                });
+            }else {
+                res.status(200).send({user: userUpdated});
+            }
+        }
+    });
+}
+
+function uploadImage(req, res) {
+    res.status(200).send({message: 'upload image service'});
 }
 
 module.exports = {
     test,
     saveUser,
-    login
+    login,
+    updateUser
 };
