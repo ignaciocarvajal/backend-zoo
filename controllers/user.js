@@ -1,6 +1,8 @@
 'use strict'
 //moduls
 var bcrypt = require('bcrypt-nodejs');
+var fs = require('fs');
+var path = require('path');
 
 
 //models
@@ -98,10 +100,6 @@ function login(req, res) {
 }
 
 function updateUser(req, res){
-   /* res.status(200).send({
-        message: 'test updated user'
-    });*/
-
     var userId = req.params.id;
 
     var update = req.body;
@@ -132,12 +130,98 @@ function updateUser(req, res){
 }
 
 function uploadImage(req, res) {
-    res.status(200).send({message: 'upload image service'});
+
+    var userId = req.params.id;
+    var fileName = 'no uploaded';
+
+    if(req.files.image){
+        var filePath = req.files.image.path;
+        var fileSplit = filePath.split('\\');
+        var fileName = fileSplit[2];
+        var extensionFile = fileName.split('\.');
+        var fileExt = extensionFile[1];
+
+        if(fileExt == 'png' || fileExt == 'jpg' || fileExt == 'jpeg' || fileExt == 'gif'){
+
+            if(userId != req.user.sub){
+                return res.status(500).send({
+                    message: 'you not have permision'
+                });
+            }
+
+            UserModel.findByIdAndUpdate(userId, {image: fileName},{new: true},(err, userUpdated) => {
+                if(err){
+                    res.status(500).send({
+                        message: 'Error, no find record'
+                    });
+                }else{
+                    if(!userUpdated){
+                        res.status(404).send({
+                            message: 'no update user'
+                        });
+                    }else {
+                        res.status(200).send({
+                            user: userUpdated,
+                            image: fileName
+                        });
+                    }
+                }
+            });
+
+        }else {
+            fs.unlink(filePath, (err) => {
+                if(err){
+                    res.status(200).send({message: 'no valid extension and nor remove image'});
+                }else{
+                    res.status(200).send({message: 'no valid extension'});
+                }
+            });
+            res.status(200).send({
+                message: 'extension not valid'
+            });
+        }
+    }else {
+        res.status(200).send({
+           message: 'no files uploaded'
+        });
+    }
+}
+
+
+function  getImageFile(req, res) {
+    var imageFile = req.params.imageFile;
+    var pathFile = './upload/user/'+imageFile;
+
+    fs.exists(pathFile, (exists) =>{
+       if(exists){
+           res.sendFile(path.resolve(pathFile));
+       }else{
+        res.status(404).send({message: 'file not foud'});
+       }
+    });
+}
+
+function getKeepers(req, res) {
+
+    UserModel.find({role: 'ROLE_ADMIN'}).exec((err, users)=>{
+        if(err){
+            res.status(500).send({message: 'Error in the request'});
+        }else{
+            if(!users){
+                res.status(404).send({message: 'No have keepers'});
+            }else{
+                res.status(200).send({ keepers: users});
+            }
+        }
+    });
 }
 
 module.exports = {
     test,
     saveUser,
     login,
-    updateUser
+    updateUser,
+    uploadImage,
+    getImageFile,
+    getKeepers
 };
